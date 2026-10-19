@@ -1,136 +1,102 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="pt-BR">
 <head>
-  <title>Realtime Translator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://localhost:11434 http://localhost:8008 wss://api.deepgram.com; media-src 'self' blob:">
+  <title>Tradutor de voz em tempo real</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    h1 {
-      color: #333;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    div {
-      margin-bottom: 15px;
-      width: 100%;
-      max-width: 400px;
-    }
-
-    label {
-      font-weight: bold;
-      color: #555;
-      display: block;
-      margin-bottom: 5px;
-    }
-
-    select,
-    button {
-      width: 100%;
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-
-    select {
-      background-color: white;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      margin-top: 10px;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    span {
-      font-weight: bold;
-      color: #333;
-    }
-
-    p {
-      background-color: white;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      padding: 10px;
-      min-height: 50px;
-    }
-
-    #stop {
-      display: none;
-    }
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #0b1120; color: #e5e7eb; }
+    main { width: min(980px, calc(100% - 32px)); margin: 32px auto; }
+    h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 38px); }
+    .subtitle { margin: 0 0 24px; color: #94a3b8; }
+    .card { background: #111827; border: 1px solid #263247; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 16px 45px #0004; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    label { display: block; color: #cbd5e1; font-size: 14px; margin-bottom: 7px; }
+    input, select, button { width: 100%; border-radius: 9px; border: 1px solid #334155; padding: 11px 12px; font: inherit; }
+    input, select, .local-info { color: #f8fafc; background: #0f172a; }
+    .local-info { min-height: 43px; border: 1px solid #334155; border-radius: 9px; padding: 11px 12px; }
+    button { border: 0; cursor: pointer; font-weight: 700; color: white; background: #2563eb; }
+    button:hover { filter: brightness(1.1); }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    button.secondary { background: #334155; }
+    button.danger { background: #dc2626; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 16px; }
+    .actions button:last-child { width: auto; }
+    details { margin-top: 18px; }
+    details summary { cursor: pointer; font-weight: 700; }
+    details .grid { margin-top: 16px; }
+    .hint { margin: 12px 0 0; color: #94a3b8; font-size: 13px; line-height: 1.5; }
+    .voice-setup { margin-top: 16px; padding: 14px; background: #0f172a; border: 1px solid #334155; border-radius: 10px; }
+    .voice-setup p { margin: 6px 0 12px; color: #94a3b8; font-size: 13px; line-height: 1.45; }
+    .voice-row { display: flex; align-items: center; gap: 12px; }
+    .voice-row button { width: auto; min-width: 210px; }
+    #voice-state { color: #cbd5e1; font-size: 13px; }
+    .status { display: flex; align-items: center; gap: 10px; min-height: 24px; margin-top: 14px; color: #cbd5e1; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #64748b; flex: none; }
+    .status[data-type="working"] .dot { background: #f59e0b; animation: pulse 1s infinite; }
+    .status[data-type="ok"] .dot { background: #22c55e; }
+    .status[data-type="error"] .dot { background: #ef4444; }
+    .transcript { min-height: 150px; margin: 8px 0 0; padding: 14px; white-space: pre-wrap; line-height: 1.55; background: #0f172a; border: 1px solid #263247; border-radius: 10px; overflow-wrap: anywhere; }
+    .interim { color: #64748b; font-style: italic; }
+    @keyframes pulse { 50% { opacity: .35; } }
+    @media (max-width: 680px) { .grid, .actions { grid-template-columns: 1fr; } .actions button:last-child { width: 100%; } }
   </style>
 </head>
-
 <body>
-  <h1>Realtime Translator</h1>
-  <div> <label for="language">Source Language:</label> <select id="language">
-      <option value="en">English</option>
-      <option value="hi">Hindi</option>
-      <option value="es">Spanish</option>
-      <option value="bg">Bulgarian</option>
-      <option value="ca">Catalan</option>
-      <option value="zh">Chinese (Mandarin, Simplified)</option>
-      <option value="zh-TW">Chinese (Mandarin, Traditional)</option>
-      <option value="zh-HK">Chinese (Cantonese, Traditional)</option>
-      <option value="cs">Czech</option>
-      <option value="da">Danish</option>
-      <option value="nl">Dutch</option>
-      <option value="fi">Finnish</option>
-      <option value="nl-BE">Flemish</option>
-      <option value="fr">French</option>
-      <option value="de">German</option>
-      <option value="de-CH">German (Switzerland)</option>
-      <option value="el">Greek</option>
-      <option value="hu">Hungarian</option>
-      <option value="id">Indonesian</option>
-      <option value="it">Italian</option>
-      <option value="ja">Japanese</option>
-      <option value="ko">Korean</option>
-      <option value="lv">Latvian</option>
-      <option value="lt">Lithuanian</option>
-      <option value="ms">Malay</option>
-      <option value="multi">Multilingual (Spanish + English)</option>
-      <option value="no">Norwegian</option>
-      <option value="pl">Polish</option>
-      <option value="pt">Portuguese</option>
-      <option value="ro">Romanian</option>
-      <option value="ru">Russian</option>
-      <option value="sk">Slovak</option>
-      <option value="es">Spanish</option>
-      <option value="sv">Swedish</option>
-      <option value="th">Thai</option>
-      <option value="tr">Turkish</option>
-      <option value="uk">Ukrainian</option>
-      <option value="vi">Vietnamese</option>
-    </select> </div>
-  <div> <label>Target Language: English</label> </div>
-  <div> <span>Source Text:</span>
-    <p id="source-text"></p>
-  </div>
-  <div> <span>Translation:</span>
-    <p id="translated-text"></p>
-  </div>
-  <div> <button id="start">Start</button>
-    <button id="stop">Stop</button>
-  </div>
-  <script type="module" src="renderer.js"></script>
+  <main>
+    <h1>Tradutor de voz em tempo real</h1>
+    <p class="subtitle">Fale no microfone, veja a transcrição e ouça a tradução local em inglês.</p>
+    <section class="card">
+      <div class="grid">
+        <div>
+          <label for="language">Idioma falado</label>
+          <select id="language">
+            <option value="pt-BR" selected>Português (Brasil)</option>
+            <option value="pt-PT">Português (Portugal)</option>
+            <option value="es">Espanhol</option>
+            <option value="fr">Francês</option>
+            <option value="de">Alemão</option>
+            <option value="it">Italiano</option>
+            <option value="en-US">Inglês</option>
+            <option value="multi">Multilíngue</option>
+          </select>
+        </div>
+        <div>
+          <label for="output-device">Saída da voz traduzida</label>
+          <select id="output-device"><option value="default">Alto-falante padrão</option></select>
+        </div>
+      </div>
+      <details id="settings">
+        <summary>Configuração</summary>
+        <div class="grid">
+          <div><label for="deepgram-key">Chave da Deepgram</label><input id="deepgram-key" type="password" autocomplete="off" placeholder="Chave da Deepgram"></div>
+          <div><label>Tradução</label><div class="local-info">Ollama local · TranslateGemma 4B · sem chave</div></div>
+        </div>
+        <p class="hint">A chave da Deepgram é salva apenas no armazenamento local deste aplicativo. A tradução roda localmente na sua GPU e não utiliza a OpenAI.</p>
+        <div class="voice-setup">
+          <strong>Minha voz traduzida</strong>
+          <p>Grave 12 segundos em um ambiente silencioso, falando naturalmente. A amostra ficará somente nesta máquina e será usada para sintetizar o inglês com o seu timbre.</p>
+          <div class="voice-row">
+            <button id="record-voice" class="secondary" type="button">Gravar amostra de voz</button>
+            <span id="voice-state">Verificando serviço local...</span>
+          </div>
+        </div>
+      </details>
+      <div class="actions">
+        <button id="start">Iniciar tradução</button>
+        <button id="stop" class="danger" disabled>Parar</button>
+        <button id="clear" class="secondary">Limpar textos</button>
+      </div>
+      <div id="status" class="status" data-type="idle"><span class="dot"></span><span id="status-text">Pronto para configurar.</span></div>
+    </section>
+    <section class="grid">
+      <article class="card"><strong>Transcrição</strong><div id="source-text" class="transcript"><span class="interim">O texto falado aparecerá aqui.</span></div></article>
+      <article class="card"><strong>Tradução (inglês)</strong><div id="translated-text" class="transcript"><span class="interim">A tradução aparecerá aqui.</span></div></article>
+    </section>
+  </main>
+  <script src="renderer.js"></script>
 </body>
-
 </html>

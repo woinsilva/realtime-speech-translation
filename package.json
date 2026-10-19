@@ -1,19 +1,19 @@
 {
   "name": "realtime-translator",
   "version": "1.0.0",
-  "description": "",
+  "description": "Tradução de voz em tempo real com Deepgram, Ollama e clonagem local de voz",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron . --enable-logging --enable-audio-service"
+    "start": "set ELECTRON_RUN_AS_NODE=&& electron . --enable-logging --enable-audio-service"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@deepgram/sdk": "^3.8.0",
-    "@electron/remote": "^2.1.2",
-    "dotenv": "^16.4.5",
-    "electron": "^32.1.2"
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "electron": "^44.4.1"
   }
 }

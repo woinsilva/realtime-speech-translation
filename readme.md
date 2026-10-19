@@ -1,76 +1,48 @@
-# Real-Time Speech Translation with Virtual Microphone
+# Tradutor de voz em tempo real
 
-This project provides a real-time speech translation system that captures audio from your microphone, transcribes it to text, translates the text into another language, and outputs the translated speech through a virtual microphone. The virtual microphone (e.g., [BlackHole](https://github.com/ExistentialAudio/BlackHole) or [VB-Audio Cable](https://vb-audio.com/Cable/)) can be used in applications like Google Meet, Zoom, or Microsoft Teams for live translated speech.
+Aplicativo Electron que captura o microfone, transcreve a fala com a Deepgram, traduz localmente para inglês com o Ollama e reproduz a tradução com uma cópia local da sua voz. Sem amostra de voz, usa a voz padrão da Deepgram como alternativa.
 
-## Requirements
-- **Node.js**
-- **Deepgram API** (for speech-to-text transcription)
-- **Google Cloud Translation API** (for translating text)
-- **Virtual Audio Cable** or **BlackHole** (for routing translated audio into other apps)
+## Requisitos
 
-## How It Works
+- Node.js 20 ou mais recente
+- Uma chave de API da [Deepgram](https://console.deepgram.com/)
+- Ollama disponível em `http://localhost:11434` com o modelo `translategemma:4b`
+- Docker com GPU para a clonagem local de voz com Chatterbox Turbo
+- Opcional: [VB-Cable](https://vb-audio.com/Cable/) no Windows para encaminhar a voz traduzida como microfone em reuniões
 
-1. **Audio Capture:**
-   - The app captures audio from the user's microphone using the Web Audio API.
-   - This audio is processed and streamed to Deepgram for real-time transcription.
+## Executar no Windows
 
-2. **Transcription:**
-   - Transcriptions are received via a WebSocket from Deepgram's API.
-   - The transcribed text is displayed and processed for translation.
+```powershell
+npm.cmd install
+npm.cmd start
+```
 
-3. **Translation:**
-   - Transcriptions are sent to the Google Cloud Translation API for real-time translation into a specified target language.
+O uso de `npm.cmd` evita o bloqueio do script `npm.ps1` quando a política de execução do PowerShell é restrita.
 
-4. **Text-to-Speech (TTS):**
-   - The translated text is converted to speech using Deepgram's TTS WebSocket service.
+Neste computador, inicie o container existente do Ollama antes do aplicativo:
 
-5. **Virtual Microphone Output:**
-   - The translated audio is routed to a virtual microphone (e.g., BlackHole or VB-Audio Cable), which can then be used as the input in video conferencing applications.
+```powershell
+docker start video-ollama
+```
 
-## Data Flow (Piping):
-1. **Input from Microphone:**
-   - Audio is captured from the user’s microphone (excluding virtual mics to prevent feedback loops).
+O modelo local já foi instalado no volume persistente do Docker. Em outra instalação do Ollama, use `ollama pull translategemma:4b`.
 
-2. **Transcription and Translation:**
-   - Audio is sent to the Deepgram API for transcription.
-   - The transcribed text is sent to Google’s Translation API for translation.
+Inicie também o serviço local de clonagem de voz:
 
-3. **Queueing and Playback:**
-   - Translated text is sent to the Deepgram TTS service for speech synthesis.
-   - The synthesized speech is queued for playback.
+```powershell
+docker compose -f docker-compose.voice.yml up -d
+```
 
-4. **Virtual Audio Output:**
-   - The output is routed to the virtual microphone, making it available for apps like Zoom, Teams, or Google Meet.
+Na primeira execução, abra **Configuração**, cole somente a chave da Deepgram e clique em **Iniciar tradução**. A chave fica no armazenamento local do Electron. Como alternativa, copie `.env.example` para `.env` e preencha `DEEPGRAM_KEY`.
 
-## Virtual Microphone Setup
+Para usar seu próprio timbre, clique em **Gravar amostra de voz**, fale naturalmente durante 12 segundos e espere o indicador informar que a voz está pronta. A gravação fica em `voice-data/my-voice.wav`, ignorada pelo Git.
 
-To use the translated speech in video conferencing apps, you'll need to set up a virtual audio device:
-- **[BlackHole](https://github.com/ExistentialAudio/BlackHole)** (for macOS)
-- **[VB-Audio Cable](https://vb-audio.com/Cable/)** (for Windows)
+Quando o VB-Cable está instalado, o aplicativo o seleciona automaticamente, envia a tradução para a chamada e mantém uma cópia no alto-falante local. No Zoom, Teams, Discord ou Meet, selecione `CABLE Output (VB-Audio Virtual Cable)` como microfone.
 
-Once the virtual microphone is installed:
-1. Select the virtual microphone as the input in your video conferencing app to stream the translated speech live.
+## Observações
 
-## How to Run
-
-1. Clone the repository and install dependencies:
-   ```bash
-   npm install
-    ```
-
-2. Environment variables are already set up with testing values for demonstration purposes. These include temporary keys for Deepgram and Google Cloud APIs.
-
-3. Start the app:
-
-   ```bash
-   npm run start
-    ```
-
-4. Open the app in a browser, select the language, and start transcription and translation using the UI.
-
-
-## Demo video (this is what the other person in the meeting will hear):
-
-https://github.com/user-attachments/assets/0e7a4baf-a684-440c-be93-24509547d4ba
-
-
+- O idioma de destino atual é inglês porque a voz configurada (`aura-2-thalia-en`) é inglesa.
+- O fluxo usa transcrições finais da Deepgram para evitar traduções duplicadas.
+- A tradução acontece localmente na GPU e não exige chave nem créditos da OpenAI.
+- Quando uma amostra existe, a voz em inglês é sintetizada localmente pelo Chatterbox Turbo; sem amostra, a voz padrão da Deepgram é usada como fallback.
+- A Deepgram continua sendo um serviço externo e pode ser limitada por créditos.

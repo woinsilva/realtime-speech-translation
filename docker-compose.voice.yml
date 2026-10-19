@@ -1,0 +1,17 @@
+services:
+  voice-clone:
+    build:
+      context: ./voice-service
+    container_name: realtime-translator-voice
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8008:8008"
+    volumes:
+      - ./voice-data:/data
+      - chatterbox-models:/models
+      - chatterbox-pkuseg:/root/.pkuseg
+    gpus: all
+
+volumes:
+  chatterbox-models:
+  chatterbox-pkuseg:
